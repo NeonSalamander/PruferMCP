@@ -34,7 +34,7 @@ internal class PruferMcpToolWindow : ToolWindow
     public override async Task InitializeAsync(CancellationToken cancellationToken)
     {
         _dataContext = new PruferMcpData(_mcpClient, _connectionStore);
-        await _dataContext.LoadSavedConnectionsAsync(cancellationToken).ConfigureAwait(false);
+        await _dataContext.LoadSavedServersAsync(cancellationToken);
     }
 
     public override Task<IRemoteUserControl> GetContentAsync(CancellationToken cancellationToken)

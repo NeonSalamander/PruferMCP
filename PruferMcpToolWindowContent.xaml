@@ -28,7 +28,6 @@
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
 
                             <Grid Grid.Row="0">
@@ -48,23 +47,6 @@
                             </Grid>
 
                             <Grid Grid.Row="1" Margin="0,4,0,0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-
-                                <Label Grid.Column="0" Content="Saved:" VerticalAlignment="Center" />
-                                <ComboBox Grid.Column="1" ItemsSource="{Binding SavedConnectionNames}" SelectedItem="{Binding SelectedSavedConnection}" VerticalAlignment="Center" Margin="4,0" />
-
-                                <Button Grid.Column="2" Content="Load" Command="{Binding LoadConnectionCommand}" Margin="4,0" Padding="10,3" />
-                                <Button Grid.Column="3" Content="Save" Command="{Binding SaveConnectionCommand}" Margin="4,0" Padding="10,3" />
-                                <Button Grid.Column="4" Content="Delete" Command="{Binding DeleteConnectionCommand}" Margin="4,0" Padding="10,3" />
-                            </Grid>
-
-                            <Grid Grid.Row="2" Margin="0,4,0,0">
                                 <Grid.Style>
                                     <Style TargetType="Grid">
                                         <Setter Property="Visibility" Value="Collapsed" />
@@ -90,7 +72,7 @@
                                 <TextBox Grid.Column="3" Text="{Binding Arguments}" VerticalAlignment="Center" Margin="4,0" />
                             </Grid>
 
-                            <Grid Grid.Row="2" Margin="0,4,0,0">
+                            <Grid Grid.Row="1" Margin="0,4,0,0">
                                 <Grid.Style>
                                     <Style TargetType="Grid">
                                         <Setter Property="Visibility" Value="Collapsed" />
@@ -108,7 +90,12 @@
                                 </Grid.ColumnDefinitions>
 
                                 <Label Grid.Column="0" Content="Server URL (SSE):" VerticalAlignment="Center" />
-                                <TextBox Grid.Column="1" Text="{Binding ServerUrl}" VerticalAlignment="Center" Margin="4,0" />
+                                <ComboBox Grid.Column="1"
+                                          IsEditable="True"
+                                          ItemsSource="{Binding SavedServerUrls}"
+                                          Text="{Binding ServerUrl, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                          VerticalAlignment="Center"
+                                          Margin="4,0" />
                             </Grid>
                         </Grid>
                     </Border>
@@ -238,41 +225,14 @@
                                                                        FontSize="10"
                                                                        Margin="0,0,4,0" />
 
-                                                            <Grid Grid.Row="0"
-                                                                  Grid.RowSpan="2"
-                                                                  Grid.Column="1"
-                                                                  Margin="4,0,0,0">
-                                                                <TextBox Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                                         VerticalAlignment="Center"
-                                                                         Visibility="Visible">
-                                                                    <TextBox.Style>
-                                                                        <Style TargetType="TextBox">
-                                                                            <Setter Property="Visibility" Value="Visible" />
-                                                                            <Style.Triggers>
-                                                                                <DataTrigger Binding="{Binding HasEnumValues}" Value="True">
-                                                                                    <Setter Property="Visibility" Value="Collapsed" />
-                                                                                </DataTrigger>
-                                                                            </Style.Triggers>
-                                                                        </Style>
-                                                                    </TextBox.Style>
-                                                                </TextBox>
-
-                                                                <ComboBox ItemsSource="{Binding EnumValues}"
-                                                                          SelectedItem="{Binding Value, Mode=TwoWay}"
-                                                                          VerticalAlignment="Center"
-                                                                          Visibility="Collapsed">
-                                                                    <ComboBox.Style>
-                                                                        <Style TargetType="ComboBox">
-                                                                            <Setter Property="Visibility" Value="Collapsed" />
-                                                                            <Style.Triggers>
-                                                                                <DataTrigger Binding="{Binding HasEnumValues}" Value="True">
-                                                                                    <Setter Property="Visibility" Value="Visible" />
-                                                                                </DataTrigger>
-                                                                            </Style.Triggers>
-                                                                        </Style>
-                                                                    </ComboBox.Style>
-                                                                </ComboBox>
-                                                            </Grid>
+                                                            <ComboBox Grid.Row="0"
+                                                                      Grid.RowSpan="2"
+                                                                      Grid.Column="1"
+                                                                      IsEditable="True"
+                                                                      ItemsSource="{Binding EnumValues}"
+                                                                      Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                      VerticalAlignment="Center"
+                                                                      Margin="4,0,0,0" />
                                                         </Grid>
                                                     </DataTemplate>
                                                 </ItemsControl.ItemTemplate>

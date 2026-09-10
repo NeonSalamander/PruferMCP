@@ -20,7 +20,6 @@ internal class PruferMcpData : NotifyPropertyChangedObject, IDisposable
     private string _executablePath = @"C:\Program Files\nodejs\node.exe";
     private string _arguments = @"C:\mcp\server.js";
     private string _serverUrl = "http://localhost:3000/sse";
-    private string _selectedSavedConnection = string.Empty;
     private bool _isConnected;
     private bool _isBusy;
     private ToolInfo? _selectedTool;
@@ -35,16 +34,13 @@ internal class PruferMcpData : NotifyPropertyChangedObject, IDisposable
         _mcpClient.LogMessage += OnMcpLogMessage;
 
         TransportOptions = new ObservableCollection<string> { "stdio", "http" };
-        SavedConnectionNames = new ObservableCollection<string>();
+        SavedServerUrls = new ObservableCollection<string>();
         Headers = new ObservableCollection<HttpHeader>();
 
         ConnectCommand = new AsyncCommand(ConnectAsync);
         DisconnectCommand = new AsyncCommand(DisconnectAsync) { CanExecute = false };
         CallSelectedToolCommand = new AsyncCommand(CallSelectedToolAsync) { CanExecute = false };
         AddHeaderCommand = new AsyncCommand(AddHeaderAsync);
-        SaveConnectionCommand = new AsyncCommand(SaveConnectionAsync);
-        LoadConnectionCommand = new AsyncCommand(LoadConnectionAsync);
-        DeleteConnectionCommand = new AsyncCommand(DeleteConnectionAsync);
 
         Tools = new ObservableCollection<ToolInfo>();
     }
@@ -58,14 +54,22 @@ internal class PruferMcpData : NotifyPropertyChangedObject, IDisposable
         _mcpClient.LogMessage -= OnMcpLogMessage;
     }
 
-    public async Task LoadSavedConnectionsAsync(CancellationToken cancellationToken)
+    public async Task LoadSavedServersAsync(CancellationToken cancellationToken)
     {
-        var connections = await _connectionStore.LoadAsync(cancellationToken).ConfigureAwait(false);
+        var connections = await _connectionStore.LoadAsync(cancellationToken);
 
-        SavedConnectionNames.Clear();
-        foreach (var connection in connections)
+        var urls = connections
+            .Where(c => string.Equals(c.TransportType, "http", StringComparison.OrdinalIgnoreCase))
+            .Select(c => c.ServerUrl.Trim())
+            .Where(url => !string.IsNullOrEmpty(url))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(url => url, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        SavedServerUrls.Clear();
+        foreach (var url in urls)
         {
-            SavedConnectionNames.Add(connection.Name);
+            SavedServerUrls.Add(url);
         }
     }
 
@@ -78,7 +82,7 @@ internal class PruferMcpData : NotifyPropertyChangedObject, IDisposable
     public ObservableCollection<string> TransportOptions { get; }
 
     [DataMember]
-    public ObservableCollection<string> SavedConnectionNames { get; }
+    public ObservableCollection<string> SavedServerUrls { get; }
 
     [DataMember]
     public string TransportType
@@ -106,13 +110,6 @@ internal class PruferMcpData : NotifyPropertyChangedObject, IDisposable
     {
         get => _serverUrl;
         set => SetProperty(ref _serverUrl, value);
-    }
-
-    [DataMember]
-    public string SelectedSavedConnection
-    {
-        get => _selectedSavedConnection;
-        set => SetProperty(ref _selectedSavedConnection, value);
     }
 
     [DataMember]
@@ -192,15 +189,6 @@ internal class PruferMcpData : NotifyPropertyChangedObject, IDisposable
     [DataMember]
     public AsyncCommand AddHeaderCommand { get; }
 
-    [DataMember]
-    public AsyncCommand SaveConnectionCommand { get; }
-
-    [DataMember]
-    public AsyncCommand LoadConnectionCommand { get; }
-
-    [DataMember]
-    public AsyncCommand DeleteConnectionCommand { get; }
-
     private async Task ConnectAsync(object? parameter, CancellationToken cancellationToken)
     {
         if (IsBusy)
@@ -231,11 +219,11 @@ internal class PruferMcpData : NotifyPropertyChangedObject, IDisposable
                 _ => new StdioMcpTransport(executablePath, arguments),
             };
 
-            await _mcpClient.ConnectAsync(transport, cancellationToken).ConfigureAwait(false);
+            await _mcpClient.ConnectAsync(transport, cancellationToken);
             IsConnected = true;
             StatusMessage = "Connected. Requesting tool list...";
 
-            var result = await _mcpClient.SendRequestAsync("tools/list", null, cancellationToken).ConfigureAwait(false);
+            var result = await _mcpClient.SendRequestAsync("tools/list", null, cancellationToken);
             RenderResponse(result);
 
             if (result.TryGetProperty("tools", out var toolsElement) && toolsElement.ValueKind == JsonValueKind.Array)
@@ -250,7 +238,7 @@ internal class PruferMcpData : NotifyPropertyChangedObject, IDisposable
                 }
             }
 
-            await SaveCurrentConnectionAsync(cancellationToken).ConfigureAwait(false);
+            await SaveCurrentConnectionAsync(cancellationToken);
             StatusMessage = $"Loaded {Tools.Count} tools.";
         }
         catch (Exception ex)
@@ -291,7 +279,7 @@ internal class PruferMcpData : NotifyPropertyChangedObject, IDisposable
                 ["arguments"] = arguments,
             };
 
-            var result = await _mcpClient.SendRequestAsync("tools/call", args, cancellationToken).ConfigureAwait(false);
+            var result = await _mcpClient.SendRequestAsync("tools/call", args, cancellationToken);
             RenderResponse(result);
             StatusMessage = $"{SelectedTool.Name} completed.";
         }
@@ -311,55 +299,10 @@ internal class PruferMcpData : NotifyPropertyChangedObject, IDisposable
         return Task.CompletedTask;
     }
 
-    private async Task SaveConnectionAsync(object? parameter, CancellationToken cancellationToken)
-    {
-        await SaveCurrentConnectionAsync(cancellationToken).ConfigureAwait(false);
-        await LoadSavedConnectionsAsync(cancellationToken).ConfigureAwait(false);
-        StatusMessage = "Connection saved.";
-    }
-
-    private async Task LoadConnectionAsync(object? parameter, CancellationToken cancellationToken)
-    {
-        var connections = await _connectionStore.LoadAsync(cancellationToken).ConfigureAwait(false);
-        var connection = connections.FirstOrDefault(c => c.Name == SelectedSavedConnection);
-        if (connection is null)
-            return;
-
-        TransportType = connection.TransportType;
-        ExecutablePath = connection.ExecutablePath;
-        Arguments = connection.Arguments;
-        ServerUrl = connection.ServerUrl;
-
-        Headers.Clear();
-        foreach (var header in connection.Headers)
-        {
-            Headers.Add(new HttpHeader(h => Headers.Remove(h))
-            {
-                Name = header.Name,
-                Value = header.Value,
-            });
-        }
-
-        StatusMessage = $"Loaded connection '{connection.Name}'.";
-    }
-
-    private async Task DeleteConnectionAsync(object? parameter, CancellationToken cancellationToken)
-    {
-        var connections = await _connectionStore.LoadAsync(cancellationToken).ConfigureAwait(false);
-        var removed = connections.RemoveAll(c => c.Name == SelectedSavedConnection);
-        if (removed == 0)
-            return;
-
-        await _connectionStore.SaveAsync(connections, cancellationToken).ConfigureAwait(false);
-        await LoadSavedConnectionsAsync(cancellationToken).ConfigureAwait(false);
-        SelectedSavedConnection = string.Empty;
-        StatusMessage = "Connection deleted.";
-    }
-
     private async Task SaveCurrentConnectionAsync(CancellationToken cancellationToken)
     {
         var name = GenerateConnectionName();
-        var connections = await _connectionStore.LoadAsync(cancellationToken).ConfigureAwait(false);
+        var connections = await _connectionStore.LoadAsync(cancellationToken);
 
         connections.RemoveAll(c => c.Name == name);
         connections.Insert(0, new SavedConnection
@@ -375,15 +318,8 @@ internal class PruferMcpData : NotifyPropertyChangedObject, IDisposable
                 .ToList(),
         });
 
-        await _connectionStore.SaveAsync(connections, cancellationToken).ConfigureAwait(false);
-        await LoadSavedConnectionsAsync(cancellationToken).ConfigureAwait(false);
-
-        if (!SavedConnectionNames.Contains(name))
-        {
-            SavedConnectionNames.Insert(0, name);
-        }
-
-        SelectedSavedConnection = name;
+        await _connectionStore.SaveAsync(connections, cancellationToken);
+        await LoadSavedServersAsync(cancellationToken);
     }
 
     private string GenerateConnectionName()
@@ -460,6 +396,7 @@ internal class PruferMcpData : NotifyPropertyChangedObject, IDisposable
 
                     if (parameter.EnumValues.Count > 0)
                     {
+                        parameter.InputKind = "ComboBox";
                         parameter.Value = parameter.EnumValues[0];
                     }
                 }

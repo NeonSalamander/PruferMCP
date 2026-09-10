@@ -28,7 +28,7 @@ internal class ToolParameter : NotifyPropertyChangedObject
     public ObservableCollection<string> EnumValues { get; }
 
     [DataMember]
-    public bool HasEnumValues => EnumValues.Count > 0;
+    public string InputKind { get; set; } = "TextBox";
 
     public ToolParameter()
     {
