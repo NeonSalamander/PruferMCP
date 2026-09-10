@@ -1,9 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0-windows8.0</TargetFramework>
+    <TargetFramework>net10.0-windows8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <LangVersion>12</LangVersion>
+    <NoWarn>$(NoWarn);NU1902;NU1903</NoWarn>
     <NeutralLanguage>en-US</NeutralLanguage>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
@@ -16,6 +17,13 @@
   <ItemGroup>
     <EmbeddedResource Include="PruferMcpToolWindowContent.xaml" />
     <Page Remove="PruferMcpToolWindowContent.xaml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="190692e6ad0111f191a87ee3673230ed_1.jpg">
+      <IncludeInVSIX>true</IncludeInVSIX>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
 </Project>

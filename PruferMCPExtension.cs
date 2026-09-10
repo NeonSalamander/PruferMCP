@@ -16,7 +16,11 @@ internal class PruferMCPExtension : Extension
             version: this.ExtensionAssemblyVersion,
             publisherName: "PruferMCP",
             displayName: "Prufer MCP",
-            description: "Native WPF Model Context Protocol client for Visual Studio 2022."),
+            description: "Native WPF Model Context Protocol client for Visual Studio 2022.")
+        {
+            Icon = "190692e6ad0111f191a87ee3673230ed_1.jpg",
+            DotnetTargetVersions = new[] { DotnetTarget.Custom("net10.0") },
+        },
     };
 
     protected override void InitializeServices(IServiceCollection serviceCollection)

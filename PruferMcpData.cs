@@ -206,6 +206,17 @@ internal class PruferMcpData : NotifyPropertyChangedObject, IDisposable
         if (IsBusy)
             return;
 
+        // Capture all user-editable connection settings synchronously before any async work.
+        // Remote UI updates bound properties asynchronously, so reading them after an await
+        // could pick up stale values when the user quickly switches transport and clicks Connect.
+        var transportType = TransportType.ToLowerInvariant();
+        var executablePath = ExecutablePath;
+        var arguments = Arguments;
+        var serverUrl = ServerUrl;
+        var headers = Headers
+            .Where(h => !string.IsNullOrWhiteSpace(h.Name))
+            .ToDictionary(h => h.Name.Trim(), h => h.Value ?? string.Empty, StringComparer.Ordinal);
+
         IsBusy = true;
         StatusMessage = "Connecting...";
 
@@ -214,10 +225,10 @@ internal class PruferMcpData : NotifyPropertyChangedObject, IDisposable
             Tools.Clear();
             ResponseText = string.Empty;
 
-            IMcpTransport transport = TransportType.ToLowerInvariant() switch
+            IMcpTransport transport = transportType switch
             {
-                "http" => CreateHttpTransport(),
-                _ => new StdioMcpTransport(ExecutablePath, Arguments),
+                "http" => new HttpSseMcpTransport(serverUrl, headers),
+                _ => new StdioMcpTransport(executablePath, arguments),
             };
 
             await _mcpClient.ConnectAsync(transport, cancellationToken).ConfigureAwait(false);
@@ -251,15 +262,6 @@ internal class PruferMcpData : NotifyPropertyChangedObject, IDisposable
         {
             IsBusy = false;
         }
-    }
-
-    private IMcpTransport CreateHttpTransport()
-    {
-        var headers = Headers
-            .Where(h => !string.IsNullOrWhiteSpace(h.Name))
-            .ToDictionary(h => h.Name.Trim(), h => h.Value ?? string.Empty, StringComparer.Ordinal);
-
-        return new HttpSseMcpTransport(ServerUrl, headers);
     }
 
     private async Task DisconnectAsync(object? parameter, CancellationToken cancellationToken)
@@ -445,6 +447,22 @@ internal class PruferMcpData : NotifyPropertyChangedObject, IDisposable
                         : null,
                     Required = required.Contains(property.Name),
                 };
+
+                if (property.Value.TryGetProperty("enum", out var enumElement) && enumElement.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var item in enumElement.EnumerateArray())
+                    {
+                        if (item.ValueKind == JsonValueKind.String)
+                        {
+                            parameter.EnumValues.Add(item.GetString()!);
+                        }
+                    }
+
+                    if (parameter.EnumValues.Count > 0)
+                    {
+                        parameter.Value = parameter.EnumValues[0];
+                    }
+                }
 
                 tool.Parameters.Add(parameter);
             }

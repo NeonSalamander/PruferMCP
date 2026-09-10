@@ -238,12 +238,41 @@
                                                                        FontSize="10"
                                                                        Margin="0,0,4,0" />
 
-                                                            <TextBox Grid.Row="0"
-                                                                     Grid.RowSpan="2"
-                                                                     Grid.Column="1"
-                                                                     Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                                     VerticalAlignment="Center"
-                                                                     Margin="4,0,0,0" />
+                                                            <Grid Grid.Row="0"
+                                                                  Grid.RowSpan="2"
+                                                                  Grid.Column="1"
+                                                                  Margin="4,0,0,0">
+                                                                <TextBox Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                         VerticalAlignment="Center"
+                                                                         Visibility="Visible">
+                                                                    <TextBox.Style>
+                                                                        <Style TargetType="TextBox">
+                                                                            <Setter Property="Visibility" Value="Visible" />
+                                                                            <Style.Triggers>
+                                                                                <DataTrigger Binding="{Binding HasEnumValues}" Value="True">
+                                                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                                                </DataTrigger>
+                                                                            </Style.Triggers>
+                                                                        </Style>
+                                                                    </TextBox.Style>
+                                                                </TextBox>
+
+                                                                <ComboBox ItemsSource="{Binding EnumValues}"
+                                                                          SelectedItem="{Binding Value, Mode=TwoWay}"
+                                                                          VerticalAlignment="Center"
+                                                                          Visibility="Collapsed">
+                                                                    <ComboBox.Style>
+                                                                        <Style TargetType="ComboBox">
+                                                                            <Setter Property="Visibility" Value="Collapsed" />
+                                                                            <Style.Triggers>
+                                                                                <DataTrigger Binding="{Binding HasEnumValues}" Value="True">
+                                                                                    <Setter Property="Visibility" Value="Visible" />
+                                                                                </DataTrigger>
+                                                                            </Style.Triggers>
+                                                                        </Style>
+                                                                    </ComboBox.Style>
+                                                                </ComboBox>
+                                                            </Grid>
                                                         </Grid>
                                                     </DataTemplate>
                                                 </ItemsControl.ItemTemplate>

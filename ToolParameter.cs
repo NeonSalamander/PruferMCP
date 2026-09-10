@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using System.Runtime.Serialization;
 using Microsoft.VisualStudio.Extensibility.UI;
 
@@ -22,6 +23,17 @@ internal class ToolParameter : NotifyPropertyChangedObject
 
     [DataMember]
     public bool Required { get; set; }
+
+    [DataMember]
+    public ObservableCollection<string> EnumValues { get; }
+
+    [DataMember]
+    public bool HasEnumValues => EnumValues.Count > 0;
+
+    public ToolParameter()
+    {
+        EnumValues = new ObservableCollection<string>();
+    }
 
     [DataMember]
     public string Value
